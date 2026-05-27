@@ -1805,11 +1805,20 @@ async function init(){
   // Preload images
   const loadingBarEl=document.getElementById('loading-bar-inner');
   const loadingTextEl=document.getElementById('loading-text');
-  allPhotos=await preloadImages(photoPaths,(progress)=>{
+  // Load first batch quickly to start, rest in background
+  const MIN_LOAD=50;
+  const initialBatch=photoPaths.slice(0,MIN_LOAD);
+  const restBatch=photoPaths.slice(MIN_LOAD);
+  allPhotos=await preloadImages(initialBatch,(progress)=>{
     loadingBarEl.style.width=(progress*100)+'%';
     loadingTextEl.textContent=`正在准备惊喜... ${Math.round(progress*100)}%`;
   });
-  console.log(`Loaded ${allPhotos.length}/${totalImages} photos`);
+  // Load remaining photos in background (doesn't block)
+  preloadImages(restBatch).then(rest=>{
+    allPhotos=allPhotos.concat(rest);
+    // Update photo elements to include newly loaded images
+    createPhotoElements(allPhotos);
+  });
 
   // Create photo DOM elements
   createPhotoElements(allPhotos);
